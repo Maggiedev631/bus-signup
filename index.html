@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>補課交通車登記</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--bg:#fff8f1;--card:#fff;--ink:#2b2118;--muted:#8a7a6b;--line:#f0e2d3;--brand:#e8742a;--brand-d:#c95b16;--ok:#2f8f5b;--bad:#c0392b;--soft:#fdecdc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+.head{text-align:center;margin:8px 0 18px}
+.badge{display:inline-block;background:var(--brand);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;letter-spacing:.05em}
+h1{font-size:22px;margin:10px 0 4px}
+.sub{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 4px 18px rgba(200,120,50,.08);margin-bottom:14px}
+label.lb{display:block;font-weight:700;margin-bottom:8px}
+input[type=text],textarea{width:100%;font-size:18px;padding:13px 14px;border:2px solid var(--line);border-radius:12px;background:#fffdfb;color:var(--ink);font-family:inherit}
+input:focus,textarea:focus{outline:none;border-color:var(--brand)}
+textarea{min-height:76px;font-size:16px;resize:vertical}
+.btn{display:block;width:100%;border:0;border-radius:14px;background:var(--brand);color:#fff;font-size:18px;font-weight:700;padding:15px;margin-top:16px;cursor:pointer;font-family:inherit}
+.btn:active{background:var(--brand-d)}
+.btn[disabled]{opacity:.5}
+.btn.ghost{background:transparent;color:var(--brand);border:2px solid var(--brand)}
+.msg{margin-top:12px;color:var(--bad);font-size:15px;min-height:1em}
+.stu{background:var(--soft);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.stu b{font-size:21px}
+.stu .meta{color:var(--muted);font-size:14px;margin-top:2px}
+.q{margin:18px 0 6px;font-weight:700}
+.q small{display:block;font-weight:400;color:var(--muted);font-size:14px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{border:2px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center;background:#fff;font-size:17px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.opt.on{border-color:var(--brand);background:var(--brand);color:#fff;font-weight:700}
+.hide{display:none}
+.done{text-align:center}
+.done .ic{font-size:52px}
+.sum{text-align:left;background:var(--soft);border-radius:14px;padding:14px 16px;margin-top:14px;font-size:16px}
+.sum div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+.sum div:last-child{border:0}
+.sum span:first-child{color:var(--muted)}
+.foot{text-align:center;color:var(--muted);font-size:13px;margin-top:18px}
+.spin{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style></head><body>
+<div class="wrap">
+  <div class="head">
+    <span class="badge">空中美語 名間分校</span>
+    <h1 id="title">補課交通車登記</h1>
+    <div class="sub" id="deadline"></div>
+  </div>
+
+  <!-- 步驟1：輸入姓名 -->
+  <div class="card" id="s1">
+    <label class="lb" for="name">請輸入孩子的中文全名</label>
+    <input type="text" id="name" placeholder="例如：王小明" autocomplete="off">
+    <button class="btn" id="goBtn" onclick="doLookup()">下一步</button>
+    <div class="msg" id="m1"></div>
+  </div>
+
+  <!-- 步驟2：填寫 -->
+  <div class="card hide" id="s2">
+    <div class="stu"><b id="sName"></b><div class="meta" id="sMeta"></div></div>
+
+    <div class="q">孩子會來補課嗎？</div>
+    <div class="opts" data-k="attend">
+      <div class="opt" data-v="會來">會來上課</div>
+      <div class="opt" data-v="請假">請假</div>
+    </div>
+
+    <div id="busQ" class="hide">
+      <div class="q">去程：需要交通車接來補習班嗎？<small id="goHint"></small></div>
+      <div class="opts" data-k="go">
+        <div class="opt" data-v="搭車">需要</div>
+        <div class="opt" data-v="不搭車">不用</div>
+      </div>
+      <div class="q">回程：需要交通車送回家嗎？<small id="backHint"></small></div>
+      <div class="opts" data-k="back">
+        <div class="opt" data-v="搭車">需要</div>
+        <div class="opt" data-v="不搭車">不用</div>
+      </div>
+    </div>
+
+    <div class="q">備註 <small>選填，例如：接送地點有變、家長會自己來接</small></div>
+    <textarea id="note" maxlength="200"></textarea>
+
+    <button class="btn" id="subBtn" onclick="doSubmit()">送出</button>
+    <button class="btn ghost" onclick="back()">不是這位小朋友，重新輸入</button>
+    <div class="msg" id="m2"></div>
+  </div>
+
+  <!-- 步驟3：完成 -->
+  <div class="card hide done" id="s3">
+    <div class="ic" id="dIc">✅</div>
+    <h2 id="dTitle" style="margin:6px 0">已收到登記，謝謝！</h2>
+    <div class="sub" id="dSub"></div>
+    <div class="sum" id="dSum"></div>
+    <button class="btn ghost" onclick="back()">幫另一位小朋友登記</button>
+  </div>
+
+  <div class="foot">如有問題請直接聯絡老師</div>
+</div>
+
+<script>
+var ans = {}, curName = '';
+function $(id){ return document.getElementById(id); }
+function show(id){ ['s1','s2','s3'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); }); window.scrollTo(0,0); }
+function busy(btn, on, text){ btn.disabled = on; btn.innerHTML = on ? '<span class="spin"></span>' : text; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function fmtDeadline(d){ if(!d) return ''; var p = d.split('T'); return '填寫截止：' + p[0].replace(/-/g,'/') + ' ' + (p[1]||''); }
+
+var sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+function rpc(fn, args, ok, fail){
+  sb.rpc(fn, args || {}).then(function(res){ if (res.error) fail(res.error); else ok(res.data); }, fail);
+}
+rpc('public_info', {}, function(info){
+  if (!info) return;
+  $('title').textContent = info.title; document.title = info.title;
+  $('deadline').textContent = info.closed ? '已截止填寫' : fmtDeadline(info.deadline);
+  if (info.closed) { $('m1').textContent = '已超過填寫截止時間，如需登記請直接聯絡老師。'; $('goBtn').disabled = true; }
+}, function(){ $('m1').textContent = '系統連線失敗，請稍後再試或聯絡老師'; });
+
+$('name').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLookup(); });
+
+document.querySelectorAll('.opts').forEach(function(g){
+  g.addEventListener('click', function(e){
+    var o = e.target.closest('.opt'); if (!o) return;
+    setOpt(g.getAttribute('data-k'), o.getAttribute('data-v'));
+  });
+});
+function setOpt(k, v){
+  ans[k] = v;
+  document.querySelectorAll('.opts[data-k="' + k + '"] .opt').forEach(function(o){ o.classList.toggle('on', o.getAttribute('data-v') === v); });
+  if (k === 'attend') $('busQ').classList.toggle('hide', v !== '會來');
+}
+
+function doLookup(){
+  var n = $('name').value.trim();
+  $('m1').textContent = '';
+  if (!n) { $('m1').textContent = '請先輸入姓名'; return; }
+  busy($('goBtn'), true);
+  rpc('lookup', { p_name: n }, function(r){
+    busy($('goBtn'), false, '下一步');
+    if (!r.ok) { $('m1').textContent = r.msg; return; }
+    curName = n;
+    var s = r.student;
+    if (r.locked) { showDone(s, r.prev, true); return; }
+    $('sName').textContent = s.zh + '　家長您好';
+    $('sMeta').textContent = s.cls + '｜' + s.dateText + ' ' + s.sessionLabel;
+    $('goHint').textContent = s.pickup ? '交通車 ' + s.pickup : '';
+    $('backHint').textContent = s.dropoff ? '交通車 ' + s.dropoff : '';
+    ans = {}; document.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('on'); });
+    $('busQ').classList.add('hide'); $('note').value = ''; $('m2').textContent = '';
+    if (r.prev) { setOpt('attend', r.prev.attend); if (r.prev.go) setOpt('go', r.prev.go); if (r.prev.back) setOpt('back', r.prev.back); $('note').value = r.prev.note || ''; }
+    window._stu = s;
+    show('s2');
+  }, function(){ busy($('goBtn'), false, '下一步'); $('m1').textContent = '連線失敗，請再試一次'; });
+}
+
+function doSubmit(){
+  $('m2').textContent = '';
+  if (!ans.attend) { $('m2').textContent = '請選擇孩子會不會來補課'; return; }
+  if (ans.attend === '會來' && (!ans.go || !ans.back)) { $('m2').textContent = '請選擇去程和回程是否搭車'; return; }
+  var payload = { attend: ans.attend, go: ans.go || '', back: ans.back || '', note: $('note').value.trim() };
+  busy($('subBtn'), true);
+  rpc('submit', { p_name: curName, p_attend: payload.attend, p_go: payload.go, p_back: payload.back, p_note: payload.note }, function(r){
+    busy($('subBtn'), false, '送出');
+    if (!r.ok) { $('m2').textContent = r.msg; return; }
+    showDone(window._stu, r.answers, false, r.time);
+  }, function(){ busy($('subBtn'), false, '送出'); $('m2').textContent = '送出失敗，請再試一次'; });
+}
+
+function showDone(s, a, locked, time){
+  $('dIc').textContent = locked ? '📋' : '✅';
+  $('dTitle').textContent = locked ? '這位小朋友已經登記過了' : '已收到登記，謝謝！';
+  $('dSub').textContent = locked ? '如需修改，請直接聯絡老師' : ('送出時間：' + (time || ''));
+  var rows = [['學生', s.zh + '（' + s.cls + '）'], ['補課時間', s.dateText + ' ' + s.sessionLabel], ['出席', a.attend]];
+  if (a.attend === '會來') { rows.push(['去程搭車', a.go === '搭車' ? '需要（' + s.pickup + '）' : '不用']); rows.push(['回程搭車', a.back === '搭車' ? '需要（' + s.dropoff + '）' : '不用']); }
+  if (a.note) rows.push(['備註', a.note]);
+  $('dSum').innerHTML = rows.map(function(r){ return '<div><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
+  show('s3');
+}
+function back(){ $('name').value = ''; $('m1').textContent = ''; show('s1'); $('name').focus(); }
+</script>
+</body></html>

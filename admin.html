@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交通車登記｜老師端</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--bg:#f7f4f0;--card:#fff;--ink:#2b2118;--muted:#8a7a6b;--line:#eadfd3;--brand:#e8742a;--brand-d:#c95b16;--ok:#2f8f5b;--okbg:#e3f4ea;--bad:#c0392b;--badbg:#fbe4e1;--warnbg:#fff2d6;--soft:#fdecdc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.45}
+.wrap{max-width:900px;margin:0 auto;padding:14px 12px 60px}
+h1{font-size:19px;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+input,select,textarea{font-family:inherit;font-size:15px;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);width:100%}
+textarea{min-height:120px;line-height:1.6}
+.btn{border:0;border-radius:10px;background:var(--brand);color:#fff;font-weight:700;padding:10px 14px;font-size:15px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+.btn.red{background:#fff;color:var(--bad);border:1.5px solid var(--bad)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-top:10px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5}
+.tab{flex:0 0 auto;padding:8px 14px;border-radius:999px;background:#fff;border:1.5px solid var(--line);cursor:pointer;font-weight:600}
+.tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.hide{display:none!important}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer}
+.stat .n{font-size:24px;font-weight:800}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat.warn{background:var(--badbg);border-color:#f2c4bd}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:last-child{border:0}
+.row .nm{flex:1;min-width:0}
+.row .nm b{font-size:16px}
+.row .nm .en{color:var(--muted);font-size:13px;margin-left:4px}
+.row .nm .t{color:var(--muted);font-size:12px}
+.row .nm .nt{font-size:13px;color:#7a5a2b;background:var(--warnbg);border-radius:6px;padding:1px 6px;display:inline-block;margin-top:3px}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;margin:1px 2px 1px 0;white-space:nowrap}
+.p-ok{background:var(--okbg);color:var(--ok)}
+.p-no{background:#eee;color:#777}
+.p-bad{background:var(--badbg);color:var(--bad)}
+.p-none{background:var(--warnbg);color:#a26a00}
+.p-cls{background:var(--soft);color:var(--brand-d);font-weight:700}
+.tag-t{font-size:11px;color:#fff;background:#8a7a6b;border-radius:4px;padding:0 4px;margin-left:4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.count{font-weight:700}
+.bus h3{margin:0 0 4px;font-size:16px}
+.bus .sec{margin-top:10px}
+.bus .sec h4{margin:0 0 4px;font-size:14px;color:var(--brand-d)}
+.bus ol{margin:4px 0 0 20px;padding:0}
+.bus li{padding:2px 0}
+.bus .empty{color:var(--muted);font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fl{font-size:12px;color:var(--muted);margin:8px 0 3px;display:block}
+.cls{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px;background:#fffdfb}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px 26px;max-height:92vh;overflow:auto}
+.seg{display:flex;gap:6px}
+.seg div{flex:1;text-align:center;padding:10px 4px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.seg div.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2118;color:#fff;padding:10px 18px;border-radius:999px;z-index:30;font-size:14px}
+.login{max-width:360px;margin:60px auto}
+.qr{text-align:center}
+.qr img{width:260px;height:260px;image-rendering:pixelated}
+.url{word-break:break-all;font-size:13px;background:var(--soft);padding:8px;border-radius:8px;margin:8px 0}
+.closed{background:var(--badbg);color:var(--bad);border-radius:8px;padding:4px 10px;font-size:13px;display:inline-block;margin-top:4px}
+.open{background:var(--okbg);color:var(--ok);border-radius:8px;padding:4px 10px;font-size:13px;display:inline-block;margin-top:4px}
+</style></head><body>
+
+<div class="login card" id="loginBox">
+  <h1>老師端登入</h1>
+  <div class="sub">補課交通車登記系統</div>
+  <span class="fl">Email</span>
+  <input type="email" id="em" autocomplete="username">
+  <span class="fl">密碼</span>
+  <input type="password" id="pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+  <button class="btn" style="width:100%;margin-top:12px" onclick="login()">登入</button>
+  <div id="lmsg" style="color:var(--bad);margin-top:8px"></div>
+</div>
+
+<div class="wrap hide" id="app">
+  <div style="display:flex;align-items:flex-start;gap:8px"><h1 id="hTitle" style="flex:1"></h1><button class="btn ghost sm" onclick="logout()">登出</button></div>
+  <div id="hState"></div>
+  <div class="tabs">
+    <div class="tab on" data-t="list">回覆名單</div>
+    <div class="tab" data-t="bus">交通車名單</div>
+    <div class="tab" data-t="set">設定</div>
+    <div class="tab" data-t="qr">QR Code</div>
+  </div>
+
+  <!-- 回覆名單 -->
+  <div id="t-list">
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <div class="filters">
+        <div><span class="fl">時段</span><select id="fSes"></select></div>
+        <div><span class="fl">班級</span><select id="fCls"></select></div>
+        <div><span class="fl">狀態</span><select id="fSt">
+          <option value="">全部</option><option value="done">已回覆</option><option value="none">未回覆</option>
+          <option value="leave">請假</option><option value="go">去程搭車</option><option value="back">回程搭車</option>
+          <option value="any">有搭車（去或回）</option><option value="nobus">會來但不搭車</option></select></div>
+        <div><span class="fl">排序</span><select id="fSort">
+          <option value="cls">依班級</option><option value="time">依送出時間（新→舊）</option><option value="timeasc">依送出時間（舊→新）</option></select></div>
+      </div>
+      <div class="bar">
+        <span class="count" id="cnt"></span>
+        <span style="flex:1"></span>
+        <button class="btn ghost sm" onclick="copyFiltered()">複製這份名單</button>
+        <button class="btn ghost sm" onclick="reload()">重新整理</button>
+      </div>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <!-- 交通車 -->
+  <div id="t-bus" class="hide">
+    <div class="bar"><button class="btn sm" onclick="copyBusAll()">複製全部交通車名單</button></div>
+    <div id="busBox"></div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="t-set" class="hide">
+    <div class="card">
+      <span class="fl">標題（家長頁上方）</span><input id="cTitle">
+      <div class="grid2">
+        <div><span class="fl">補課日期文字</span><input id="cDate"></div>
+        <div><span class="fl">填寫截止時間</span><input id="cDeadline" type="datetime-local"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="cEdit" style="width:auto"> 允許家長送出後自行修改（關閉＝送出即鎖定）</label>
+    </div>
+    <div class="card">
+      <b>時段與交通車時間</b>
+      <div id="sesBox"></div>
+    </div>
+    <div class="card">
+      <b>班級與學生名單</b>
+      <div class="sub">每行一位：中文名 英文名（例：王小明 Tom）。家長只要輸入中文名就能登入。</div>
+      <div id="clsBox"></div>
+      <button class="btn ghost sm" style="margin-top:10px" onclick="addClass()">＋ 新增班級</button>
+    </div>
+    <div class="bar">
+      <button class="btn" onclick="saveConfig()">儲存設定</button>
+      <span style="flex:1"></span>
+      <button class="btn red sm" onclick="resetAll()">清空全部回覆（下次補課用）</button>
+    </div>
+  </div>
+
+  <!-- QR -->
+  <div id="t-qr" class="hide">
+    <div class="card qr">
+      <b>家長填寫 QR Code</b>
+      <div class="sub">全班共用同一個，長按圖片可儲存</div>
+      <div id="qrImg" style="margin:12px 0"></div>
+      <div class="url" id="qrUrl"></div>
+      <button class="btn ghost sm" onclick="copyText(DATA.url,'已複製家長網址')">複製家長網址</button>
+      <button class="btn ghost sm" onclick="copyText(lineMsg(),'已複製 LINE 通知')">複製 LINE 通知文字</button>
+    </div>
+    <div class="card">
+      <b>下載資料（Excel 可開）</b>
+      <div class="sub">回覆總表＝每位學生目前的狀態；送出紀錄＝每一筆送出／修改的時間。</div>
+      <div class="bar"><button class="btn ghost sm" onclick="exportRows()">下載回覆總表</button><button class="btn ghost sm" onclick="exportLogs()">下載送出紀錄</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal hide" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b id="mName" style="font-size:18px"></b>
+      <span style="cursor:pointer;font-size:22px" onclick="closeModal()">✕</span>
+    </div>
+    <div class="sub" id="mMeta"></div>
+    <span class="fl">出席</span>
+    <div class="seg" data-k="attend"><div data-v="會來">會來</div><div data-v="請假">請假</div><div data-v="">未回覆</div></div>
+    <div id="mBus">
+      <span class="fl">去程搭車</span>
+      <div class="seg" data-k="go"><div data-v="搭車">搭車</div><div data-v="不搭車">不搭車</div></div>
+      <span class="fl">回程搭車</span>
+      <div class="seg" data-k="back"><div data-v="搭車">搭車</div><div data-v="不搭車">不搭車</div></div>
+    </div>
+    <span class="fl">備註</span><textarea id="mNote" style="min-height:70px"></textarea>
+    <div class="sub" id="mTime" style="margin-top:8px"></div>
+    <div class="bar">
+      <button class="btn" style="flex:1" onclick="saveRow()">儲存</button>
+      <button class="btn red" onclick="clearRow()">清除回覆</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+var PW = '', DATA = null, edit = null, mAns = {}, CFG_RAW = null;
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function toast(t){ var d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(function(){ d.remove(); }, 1800); }
+/* ---------- 資料存取 ---------- */
+function norm(t){ return String(t || '').replace(/[\sA-Za-z.\-·‧]/g, '').replace(/台/g, '臺'); }
+function tw(ts){
+  if (!ts) return '';
+  var p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    .formatToParts(new Date(ts)).forEach(function(x){ p[x.type] = x.value; });
+  return p.year + '/' + p.month + '/' + p.day + ' ' + (p.hour === '24' ? '00' : p.hour) + ':' + p.minute + ':' + p.second;
+}
+function parseStudents(text){
+  return String(text || '').split('\n').map(function(l){
+    l = l.trim(); if (!l) return null;
+    var m = l.match(/^([^\sA-Za-z]+)\s*(.*)$/);
+    return m ? { zh: m[1], en: (m[2] || '').trim() } : { zh: l, en: '' };
+  }).filter(Boolean);
+}
+function chk(res){ if (res.error) throw res.error; return res.data; }
+function fail(e){ toast((e && e.message) || '連線失敗'); }
+function fetchAll(){
+  return Promise.all([
+    sb.from('settings').select('data').eq('id', 1).single().then(chk),
+    sb.from('responses').select('*').then(chk)
+  ]).then(function(res){
+    var cfg = res[0].data, map = {};
+    res[1].forEach(function(r){ map[norm(r.zh)] = r; });
+    var rows = [];
+    cfg.classes.forEach(function(c){
+      var s = null; cfg.sessions.forEach(function(x){ if (x.id === c.session) s = x; });
+      parseStudents(c.students).forEach(function(st){
+        var r = map[norm(st.zh)] || {};
+        rows.push({ '學生': st.zh, '英文名': st.en, '班級': c.code, '老師': c.teacher, '時段': s ? s.label : '',
+          '出席': r.attend || '', '去程搭車': r.go || '', '回程搭車': r.back || '', '備註': r.note || '',
+          '第一次送出': tw(r.first_at), '最後更新': tw(r.updated_at), '更新者': r.updated_by || '', _first: r.first_at || null });
+      });
+    });
+    var closed = false;
+    if (cfg.deadline) { var d = new Date(cfg.deadline + ':00+08:00'); closed = !isNaN(d) && new Date() > d; }
+    var base = location.href.split('#')[0].split('?')[0].replace(/admin\.html$/, '');
+    return { config: cfg, rows: rows, url: base, closed: closed, now: tw(new Date()) };
+  });
+}
+function addLog(action, r, f){
+  f = f || {};
+  return sb.from('logs').insert({ action: action, zh: r ? r['學生'] : '', cls: r ? r['班級'] : '', session: r ? r['時段'] : '',
+    attend: f.attend || '', go: f.go || '', back: f.back || '', note: f.note || '' }).then(chk);
+}
+function call(fn, args, ok){ fn.apply(null, args).then(fetchAll).then(ok).catch(fail); }
+
+function enter(){
+  sb.rpc('am_i_admin').then(chk).then(function(isAdmin){
+    if (!isAdmin) { $('lmsg').textContent = '這個帳號沒有老師權限'; sb.auth.signOut(); return; }
+    PW = 'ok';
+    return fetchAll().then(function(d){ $('loginBox').classList.add('hide'); $('app').classList.remove('hide'); load(d); });
+  }).catch(function(e){ $('lmsg').textContent = (e && e.message) || '登入失敗'; });
+}
+function login(){
+  $('lmsg').textContent = '登入中…';
+  sb.auth.signInWithPassword({ email: $('em').value.trim(), password: $('pw').value }).then(function(res){
+    if (res.error) { $('lmsg').textContent = 'Email 或密碼錯誤'; return; }
+    enter();
+  }, function(){ $('lmsg').textContent = '連線失敗'; });
+}
+function logout(){ sb.auth.signOut().then(function(){ location.reload(); }); }
+sb.auth.getSession().then(function(res){ if (res.data && res.data.session) enter(); });
+function reload(){ fetchAll().then(function(d){ load(d); toast('已更新'); }).catch(fail); }
+setInterval(function(){ if (PW && DATA && $('modal').classList.contains('hide')) fetchAll().then(load).catch(function(){}); }, 30000);
+
+document.querySelectorAll('.tab').forEach(function(t){
+  t.onclick = function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.toggle('on', x === t); });
+    ['list','bus','set','qr'].forEach(function(k){ $('t-' + k).classList.toggle('hide', k !== t.getAttribute('data-t')); });
+  };
+});
+['fSes','fCls','fSt','fSort'].forEach(function(id){ $(id).onchange = renderList; });
+
+function sesById(id){ var s = null; DATA.config.sessions.forEach(function(x){ if (x.id === id) s = x; }); return s; }
+function sesOfRow(r){ var s = null; DATA.config.sessions.forEach(function(x){ if (x.label === r['時段']) s = x; }); return s || { id: '', label: r['時段'], pickup: '', dropoff: '' }; }
+
+function load(d){
+  DATA = d;
+  var c = d.config;
+  $('hTitle').textContent = c.title;
+  $('hState').innerHTML = (d.closed ? '<span class="closed">已截止填寫</span>' : '<span class="open">開放填寫中｜截止 ' + esc((c.deadline || '').replace('T', ' ')) + '</span>') + ' <span class="sub">更新於 ' + esc(d.now) + '</span>';
+  var fs = $('fSes').value, fc = $('fCls').value;
+  $('fSes').innerHTML = '<option value="">全部時段</option>' + c.sessions.map(function(s){ return '<option value="' + esc(s.label) + '">' + esc(s.label) + '</option>'; }).join('');
+  $('fCls').innerHTML = '<option value="">全部班級</option>' + c.classes.map(function(k){ return '<option>' + esc(k.code) + '</option>'; }).join('');
+  $('fSes').value = fs; $('fCls').value = fc;
+  renderStats(); renderList(); renderBus(); renderSettings(); renderQR();
+}
+
+function isDone(r){ return !!r['最後更新']; }
+function match(r, st){
+  switch (st) {
+    case 'done': return isDone(r);
+    case 'none': return !isDone(r);
+    case 'leave': return r['出席'] === '請假';
+    case 'go': return r['去程搭車'] === '搭車';
+    case 'back': return r['回程搭車'] === '搭車';
+    case 'any': return r['去程搭車'] === '搭車' || r['回程搭車'] === '搭車';
+    case 'nobus': return r['出席'] === '會來' && r['去程搭車'] !== '搭車' && r['回程搭車'] !== '搭車';
+  }
+  return true;
+}
+function filtered(){
+  var fs = $('fSes').value, fc = $('fCls').value, st = $('fSt').value, so = $('fSort').value;
+  var rows = DATA.rows.filter(function(r){ return (!fs || r['時段'] === fs) && (!fc || r['班級'] === fc) && match(r, st); });
+  if (so === 'time') rows.sort(function(a, b){ return (b['最後更新'] || '').localeCompare(a['最後更新'] || ''); });
+  if (so === 'timeasc') rows.sort(function(a, b){ return (a['最後更新'] || '~').localeCompare(b['最後更新'] || '~'); });
+  return rows;
+}
+function setFilter(ses, st){ $('fSes').value = ses || ''; $('fCls').value = ''; $('fSt').value = st || ''; renderList(); $('list').scrollIntoView({ behavior: 'smooth' }); }
+
+function renderStats(){
+  var R = DATA.rows, h = '';
+  var done = R.filter(isDone).length, none = R.length - done, leave = R.filter(function(r){ return r['出席'] === '請假'; }).length;
+  h += stat(done + '/' + R.length, '已回覆', "setFilter('','done')");
+  h += stat(none, '未回覆', "setFilter('','none')", none > 0);
+  h += stat(leave, '請假', "setFilter('','leave')");
+  DATA.config.sessions.forEach(function(s){
+    var rs = R.filter(function(r){ return r['時段'] === s.label; });
+    var come = rs.filter(function(r){ return r['出席'] === '會來'; }).length;
+    var g = rs.filter(function(r){ return r['去程搭車'] === '搭車'; }).length;
+    var b = rs.filter(function(r){ return r['回程搭車'] === '搭車'; }).length;
+    var lab = esc(s.label);
+    h += stat(come + '/' + rs.length, lab + ' 會來', "setFilter('" + jsq(s.label) + "','')");
+    h += stat(g, lab + ' 去程搭車', "setFilter('" + jsq(s.label) + "','go')");
+    h += stat(b, lab + ' 回程搭車', "setFilter('" + jsq(s.label) + "','back')");
+  });
+  $('stats').innerHTML = h;
+}
+function jsq(s){ return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function stat(n, l, on, warn){ return '<div class="stat' + (warn ? ' warn' : '') + '" onclick="' + on + '"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>'; }
+
+function pills(r){
+  if (!isDone(r)) return '<span class="pill p-none">未回覆</span>';
+  if (r['出席'] === '請假') return '<span class="pill p-bad">請假</span>';
+  return '<span class="pill ' + (r['去程搭車'] === '搭車' ? 'p-ok' : 'p-no') + '">去 ' + (r['去程搭車'] === '搭車' ? '搭車' : '不搭') + '</span>' +
+         '<span class="pill ' + (r['回程搭車'] === '搭車' ? 'p-ok' : 'p-no') + '">回 ' + (r['回程搭車'] === '搭車' ? '搭車' : '不搭') + '</span>';
+}
+function renderList(){
+  var rows = filtered();
+  $('cnt').textContent = '共 ' + rows.length + ' 人';
+  $('list').innerHTML = rows.length ? rows.map(function(r, i){
+    return '<div class="row" onclick="openRow(\'' + jsq(r['學生']) + '\')">' +
+      '<span class="pill p-cls">' + esc(r['班級']) + '</span>' +
+      '<div class="nm"><b>' + esc(r['學生']) + '</b><span class="en">' + esc(r['英文名']) + '</span>' +
+      (r['更新者'] === '老師' ? '<span class="tag-t">老師改</span>' : '') +
+      '<div class="t">' + (isDone(r) ? '送出 ' + esc(r['最後更新'].slice(5)) : esc(r['時段'])) + '</div>' +
+      (r['備註'] ? '<div class="nt">' + esc(r['備註']) + '</div>' : '') + '</div>' +
+      '<div style="text-align:right">' + pills(r) + '</div></div>';
+  }).join('') : '<div class="sub" style="padding:14px 0">沒有符合的學生</div>';
+}
+
+function busLists(){
+  var out = [];
+  DATA.config.sessions.forEach(function(s){
+    var rs = DATA.rows.filter(function(r){ return r['時段'] === s.label; });
+    out.push({ s: s,
+      go: rs.filter(function(r){ return r['去程搭車'] === '搭車'; }),
+      back: rs.filter(function(r){ return r['回程搭車'] === '搭車'; }) });
+  });
+  return out;
+}
+function nameLine(r){ return r['學生'] + (r['英文名'] ? ' ' + r['英文名'] : '') + '（' + r['班級'] + '）' + (r['備註'] ? '　※' + r['備註'] : ''); }
+function renderBus(){
+  $('busBox').innerHTML = busLists().map(function(b, i){
+    function sec(title, arr, k){
+      return '<div class="sec"><h4>' + esc(title) + '｜' + arr.length + ' 人 <button class="btn ghost sm" style="margin-left:6px" onclick="copyBus(' + i + ',\'' + k + '\')">複製</button></h4>' +
+        (arr.length ? '<ol>' + arr.map(function(r){ return '<li>' + esc(nameLine(r)) + '</li>'; }).join('') + '</ol>' : '<div class="empty">目前沒有人</div>') + '</div>';
+    }
+    return '<div class="card bus"><h3>' + esc(b.s.label) + '</h3>' + sec('去程　' + b.s.pickup, b.go, 'go') + sec('回程　' + b.s.dropoff, b.back, 'back') + '</div>';
+  }).join('');
+}
+function busText(b, k){
+  var arr = b[k], t = DATA.config.dateText + ' ' + b.s.label + '｜' + (k === 'go' ? '去程 ' + b.s.pickup : '回程 ' + b.s.dropoff) + '（' + arr.length + ' 人）';
+  return t + '\n' + (arr.length ? arr.map(function(r, i){ return (i + 1) + '. ' + nameLine(r); }).join('\n') : '（無）');
+}
+function copyBus(i, k){ copyText(busText(busLists()[i], k), '已複製'); }
+function copyBusAll(){ copyText(busLists().map(function(b){ return busText(b, 'go') + '\n\n' + busText(b, 'back'); }).join('\n\n'), '已複製全部交通車名單'); }
+function copyFiltered(){
+  var rows = filtered(), st = $('fSt'), title = ($('fSes').value || '全部時段') + (($('fCls').value) ? ' ' + $('fCls').value : '') + '｜' + st.options[st.selectedIndex].text;
+  copyText(title + '（' + rows.length + ' 人）\n' + rows.map(function(r, i){
+    var s = !isDone(r) ? '未回覆' : r['出席'] === '請假' ? '請假' : '去:' + r['去程搭車'] + ' 回:' + r['回程搭車'];
+    return (i + 1) + '. ' + r['學生'] + (r['英文名'] ? ' ' + r['英文名'] : '') + '（' + r['班級'] + '）' + s + (r['備註'] ? '　※' + r['備註'] : '');
+  }).join('\n'), '已複製名單');
+}
+function copyText(t, msg){
+  function fallback(){
+    var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    if (ok) toast(msg); else window.prompt('請長按複製：', t);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ toast(msg); }, fallback); else fallback();
+}
+
+/* 修改單筆 */
+function openRow(zh){
+  var r = null; DATA.rows.forEach(function(x){ if (x['學生'] === zh) r = x; });
+  if (!r) return;
+  edit = r; mAns = { attend: r['出席'] || '', go: r['去程搭車'] || '', back: r['回程搭車'] || '' };
+  $('mName').textContent = r['學生'] + ' ' + r['英文名'];
+  $('mMeta').textContent = r['班級'] + '｜' + r['時段'];
+  $('mNote').value = r['備註'] || '';
+  $('mTime').textContent = isDone(r) ? ('第一次送出 ' + r['第一次送出'] + '｜最後更新 ' + r['最後更新'] + '（' + r['更新者'] + '）') : '尚未回覆';
+  paintSeg(); $('modal').classList.remove('hide');
+}
+function paintSeg(){
+  document.querySelectorAll('.seg').forEach(function(g){
+    var k = g.getAttribute('data-k');
+    g.querySelectorAll('div').forEach(function(d){ d.classList.toggle('on', d.getAttribute('data-v') === mAns[k]); });
+  });
+  $('mBus').classList.toggle('hide', mAns.attend !== '會來');
+}
+document.querySelectorAll('.seg').forEach(function(g){
+  g.onclick = function(e){ var d = e.target.closest('div[data-v]'); if (!d) return; mAns[g.getAttribute('data-k')] = d.getAttribute('data-v'); paintSeg(); };
+});
+function closeModal(){ $('modal').classList.add('hide'); edit = null; }
+function saveRow(){
+  if (!edit) return;
+  if (mAns.attend === '') { clearRow(); return; }
+  if (mAns.attend === '會來' && (!mAns.go || !mAns.back)) { toast('請選擇去程和回程'); return; }
+  var r = edit, now = new Date().toISOString();
+  var f = { attend: mAns.attend, go: mAns.attend === '會來' ? mAns.go : null, back: mAns.attend === '會來' ? mAns.back : null, note: $('mNote').value.trim().slice(0, 200) };
+  call(function(){
+    return sb.from('responses').upsert({ zh: r['學生'], attend: f.attend, go: f.go, back: f.back, note: f.note, first_at: r._first || now, updated_at: now, updated_by: '老師' })
+      .then(chk).then(function(){ return addLog('老師修改', r, f); });
+  }, [], function(d){ closeModal(); load(d); toast('已儲存'); });
+}
+function clearRow(){
+  if (!edit || !confirm('確定清除 ' + edit['學生'] + ' 的回覆？清除後家長可以重新填寫。')) return;
+  var r = edit;
+  call(function(){ return sb.from('responses').delete().eq('zh', r['學生']).then(chk).then(function(){ return addLog('老師清除回覆', r); }); },
+    [], function(d){ closeModal(); load(d); toast('已清除'); });
+}
+
+/* 設定 */
+var SC = null;
+function renderSettings(){
+  SC = JSON.parse(JSON.stringify(DATA.config));
+  $('cTitle').value = SC.title; $('cDate').value = SC.dateText; $('cDeadline').value = SC.deadline || ''; $('cEdit').checked = !!SC.allowParentEdit;
+  drawSes(); drawCls();
+}
+function drawSes(){
+  $('sesBox').innerHTML = SC.sessions.map(function(s, i){
+    return '<div class="cls"><span class="fl">時段名稱</span><input value="' + esc(s.label) + '" oninput="SC.sessions[' + i + '].label=this.value">' +
+      '<div class="grid2"><div><span class="fl">去程（接送說明）</span><input value="' + esc(s.pickup) + '" oninput="SC.sessions[' + i + '].pickup=this.value"></div>' +
+      '<div><span class="fl">回程（送回說明）</span><input value="' + esc(s.dropoff) + '" oninput="SC.sessions[' + i + '].dropoff=this.value"></div></div>' +
+      '<button class="btn red sm" style="margin-top:8px" onclick="delSes(' + i + ')">刪除時段</button></div>';
+  }).join('') + '<button class="btn ghost sm" style="margin-top:10px" onclick="addSes()">＋ 新增時段</button>';
+}
+function addSes(){ SC.sessions.push({ id: 's' + Date.now(), label: '新時段', pickup: '', dropoff: '' }); drawSes(); drawCls(); }
+function delSes(i){ if (confirm('刪除這個時段？')) { SC.sessions.splice(i, 1); drawSes(); drawCls(); } }
+function drawCls(){
+  $('clsBox').innerHTML = SC.classes.map(function(c, i){
+    var n = c.students.split('\n').filter(function(x){ return x.trim(); }).length;
+    return '<div class="cls"><div class="grid2"><div><span class="fl">班級</span><input value="' + esc(c.code) + '" oninput="SC.classes[' + i + '].code=this.value"></div>' +
+      '<div><span class="fl">老師</span><input value="' + esc(c.teacher) + '" oninput="SC.classes[' + i + '].teacher=this.value"></div></div>' +
+      '<span class="fl">時段</span><select onchange="SC.classes[' + i + '].session=this.value">' +
+      SC.sessions.map(function(s){ return '<option value="' + esc(s.id) + '"' + (s.id === c.session ? ' selected' : '') + '>' + esc(s.label) + '</option>'; }).join('') + '</select>' +
+      '<span class="fl">學生（' + n + ' 人）</span><textarea oninput="SC.classes[' + i + '].students=this.value">' + esc(c.students) + '</textarea>' +
+      '<button class="btn red sm" style="margin-top:8px" onclick="delClass(' + i + ')">刪除此班</button></div>';
+  }).join('');
+}
+function addClass(){ SC.classes.push({ code: '新班級', teacher: '', session: (SC.sessions[0] || {}).id || '', students: '' }); drawCls(); }
+function delClass(i){ if (confirm('刪除 ' + SC.classes[i].code + '？該班的回覆也會一起移除。')) { SC.classes.splice(i, 1); drawCls(); } }
+function saveConfig(){
+  SC.title = $('cTitle').value.trim(); SC.dateText = $('cDate').value.trim(); SC.deadline = $('cDeadline').value; SC.allowParentEdit = $('cEdit').checked;
+  SC.classes.forEach(function(c){ if (!SC.sessions.some(function(s){ return s.id === c.session; })) c.session = (SC.sessions[0] || {}).id || ''; });
+  call(function(){ return sb.from('settings').update({ data: SC }).eq('id', 1).then(chk); }, [], function(d){ load(d); toast('設定已儲存'); });
+}
+function resetAll(){
+  if (!confirm('確定清空「全部」回覆？（送出紀錄會保留在試算表）')) return;
+  if (!confirm('再確認一次：清空後無法復原')) return;
+  call(function(){ return sb.from('responses').delete().not('zh', 'is', null).then(chk).then(function(){ return addLog('老師清空全部回覆', null); }); },
+    [], function(d){ load(d); toast('已清空，可以開始新一輪'); });
+}
+
+/* QR */
+function renderQR(){
+  $('qrUrl').textContent = DATA.url;
+  try { var q = qrcode(0, 'M'); q.addData(DATA.url); q.make(); $('qrImg').innerHTML = '<img src="' + q.createDataURL(8, 16) + '" alt="QR Code">'; }
+  catch (e) { $('qrImg').textContent = 'QR Code 載入失敗，請複製網址'; }
+}
+function lineMsg(){
+  var c = DATA.config;
+  return '【空中美語名間分校】' + c.dateText + ' 補課交通車登記\n\n請家長點以下連結（或掃 QR Code），輸入孩子的中文全名，登記是否出席及搭乘交通車：\n' + DATA.url +
+    '\n\n' + c.sessions.map(function(s){ return '・' + s.label + '：去程 ' + s.pickup + '，回程 ' + s.dropoff; }).join('\n') +
+    '\n\n請於 ' + (c.deadline || '').replace('T', ' ').replace(/-/g, '/') + ' 前完成登記，謝謝！';
+}
+
+/* 下載 CSV（Excel 可直接開） */
+function csvDownload(name, head, rows){
+  var q = function(v){ v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  var text = '\ufeff' + [head].concat(rows).map(function(r){ return r.map(q).join(','); }).join('\r\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+function exportRows(){
+  var H = ['學生', '英文名', '班級', '老師', '時段', '出席', '去程搭車', '回程搭車', '備註', '第一次送出', '最後更新', '更新者'];
+  csvDownload('回覆總表.csv', H, DATA.rows.map(function(r){ return H.map(function(h){ return r[h]; }); }));
+}
+function exportLogs(){
+  sb.from('logs').select('*').order('at', { ascending: true }).then(chk).then(function(L){
+    csvDownload('送出紀錄.csv', ['時間', '動作', '學生', '班級', '時段', '出席', '去程搭車', '回程搭車', '備註'],
+      L.map(function(x){ return [tw(x.at), x.action, x.zh, x.cls, x.session, x.attend, x.go, x.back, x.note]; }));
+  }).catch(fail);
+}
+</script>
+</body></html>
